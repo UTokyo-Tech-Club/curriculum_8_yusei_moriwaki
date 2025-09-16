@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>研修プログラム Javascript 課題3</title>
+  </head>
+  <body>
+    <script src="./05.js"></script>
+    <script>
+      const eqArr = (want, output) => {
+        for (i = 0; i < want.length; i++) {
+          if (output[i] != want[i]) {
+            return false;
+          }
+        }
+        return true;
+      };
+      document.write(
+        eqArr(fibo(10), [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55])
+          ? `pass: want=output=[${fibo(10)}]`
+          : `wrong: want=[${[
+              0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55,
+            ]}] output=[${fibo(10)}]`
+      );
+    </script>
+  </body>
+</html>
