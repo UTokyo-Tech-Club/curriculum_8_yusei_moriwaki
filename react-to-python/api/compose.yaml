@@ -1,0 +1,45 @@
+services:
+  api:
+    build: .
+    image: react-to-python-api-img
+    container_name: react-to-python-api
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    entrypoint: [
+      "poetry", "run", "uvicorn", "app.main:app",
+      "--host", "0.0.0.0", "--port", "8000", "--reload"
+    ]
+  react-to-python-db:
+    image: mysql:8.0
+    container_name: react-to-python-db
+    platform: linux/x86_64
+    tty: true
+    ports:
+      - "3306:3306"
+    env_file:
+      - ./.env
+    volumes:
+      - type: volume
+        source: react-to-python-db
+        target: /var/lib/mysql
+      - type: bind
+        source: ./init
+        target: /docker-entrypoint-initdb.d
+
+volumes:
+  react-to-python-db:
+    name: react-to-python-db
+
+
+  
+
+
+
+
+
+

@@ -1,0 +1,9 @@
+CREATE DATABASE IF NOT EXISTS react_to_python;
+USE react_to_python;
+
+CREATE TABLE IF NOT EXISTS chats (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
