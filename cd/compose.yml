@@ -1,0 +1,13 @@
+services:
+  api:
+    build: .
+    image: cd-app
+    container_name: cd-app-container
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    env_file:
+      - ./.env
+    restart: unless-stopped
+
