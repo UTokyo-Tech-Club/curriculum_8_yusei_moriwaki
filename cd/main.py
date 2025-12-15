@@ -28,7 +28,10 @@ async def chat(request: ChatRequest):
 
     resp = client.chat.completions.create(
         model="gpt-4o",
-        messages=[{"role": "user", "content": request.question}],
+        messages=[
+            {"role": "system", "content": "あなたは関西弁で回答するアシスタントです。すべての回答を関西弁で返してください。"},
+            {"role": "user", "content": request.question}
+        ],
     )
 
     answer = resp.choices[0].message.content
