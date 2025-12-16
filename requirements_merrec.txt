@@ -1,0 +1,10 @@
+# Requirements for Mercari Dataset Import
+# Install with: pip install -r requirements_merrec.txt
+
+datasets>=4.4.1
+huggingface_hub>=1.2.3
+pandas>=2.3.3
+pymysql>=1.1.2
+python-dotenv>=1.2.1
+cloud-sql-python-connector>=1.19.0
+
