@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.purchase import Purchase, PurchaseStatus, PaymentMethod
+from app.models.purchase import Purchase
 
 
 class PurchaseRepository:
@@ -33,7 +33,7 @@ class PurchaseRepository:
         purchase = Purchase(
             buyer_user_id=buyer_user_id,
             item_listing_id=item_listing_id,
-            payment_method=PaymentMethod(payment_method),
+            payment_method=payment_method,
             shipping_name=shipping_name,
             shipping_postal_code=shipping_postal_code,
             shipping_prefecture=shipping_prefecture,
@@ -41,7 +41,7 @@ class PurchaseRepository:
             shipping_address=shipping_address,
             shipping_building=shipping_building,
             shipping_phone=shipping_phone,
-            status=PurchaseStatus.COMPLETED,  # Auto-complete for dummy implementation
+            status='completed',  # Auto-complete for dummy implementation
             completed_at=datetime.utcnow()
         )
         self.db.add(purchase)

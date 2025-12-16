@@ -34,7 +34,7 @@ class Purchase(Base):
     item_listing_id = Column(Integer, ForeignKey("item_listings.id", ondelete="CASCADE"), nullable=False)
     
     # Payment information
-    payment_method = Column(Enum(PaymentMethod), nullable=False)
+    payment_method = Column(Enum('credit', 'bank', 'convenience', name='paymentmethod'), nullable=False)
     
     # Shipping information
     shipping_name = Column(String(255), nullable=False)
@@ -46,7 +46,7 @@ class Purchase(Base):
     shipping_phone = Column(String(50), nullable=False)
     
     # Status and timestamps
-    status = Column(Enum(PurchaseStatus), default=PurchaseStatus.PENDING, index=True)
+    status = Column(Enum('pending', 'completed', 'cancelled', name='purchasestatus'), default='pending', index=True)
     created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
     completed_at = Column(TIMESTAMP, nullable=True)
 

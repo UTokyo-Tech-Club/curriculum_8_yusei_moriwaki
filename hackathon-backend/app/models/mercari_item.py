@@ -16,17 +16,18 @@ class MercariItem(Base):
     __tablename__ = "mercari_items"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, nullable=False, index=True)  # User viewing/interacting
-    stime = Column(DateTime, nullable=False, index=True)
-    session_id = Column(String(255), nullable=False, index=True)
-    sequence_id = Column(String(100), nullable=False)
-    sequence_length = Column(Integer, nullable=False)
-    event_id = Column(String(50), nullable=False, index=True)  # item_view, item_like, buy_comp, etc.
+    user_id = Column(BigInteger, nullable=True, index=True)  # User viewing/interacting
+    stime = Column(DateTime, nullable=True, index=True)
+    session_id = Column(String(255), nullable=True, index=True)
+    sequence_id = Column(String(100), nullable=True)
+    sequence_length = Column(Integer, nullable=True)
+    event_id = Column(String(50), nullable=True, index=True)  # item_view, item_like, buy_comp, etc.
     
     # Item details
     item_id = Column(BigInteger, nullable=False, index=True)
     product_id = Column(String(100), nullable=True)
     name = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
     price = Column(DECIMAL(10, 2), nullable=True)
     
     # Category information

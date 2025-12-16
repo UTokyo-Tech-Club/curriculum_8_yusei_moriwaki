@@ -1,7 +1,7 @@
 """
 Pydantic schemas for items.
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from enum import Enum
 
@@ -13,7 +13,6 @@ class ItemCategory(str, Enum):
     BOOKS = "books"
     SPORTS = "sports"
     HOME = "home"
-    TOYS = "toys"
     OTHER = "other"
 
 
@@ -53,21 +52,23 @@ class ItemUpdateRequest(BaseModel):
 
 class ItemResponse(BaseModel):
     """Response schema for item data."""
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+    
     id: str
-    item_id: int
+    item_id: int = Field(alias="itemId")
     title: str
     description: str
     price: float
     images: List[str]
     category: str
     status: str
-    seller_id: str
-    seller_name: str
-    seller_avatar: Optional[str] = None
-    views_count: int
-    likes_count: int
-    brand_name: Optional[str] = None
+    seller_id: str = Field(alias="sellerId")
+    seller_name: str = Field(alias="sellerName")
+    seller_avatar: Optional[str] = Field(None, alias="sellerAvatar")
+    views_count: int = Field(alias="viewsCount")
+    likes_count: int = Field(alias="likesCount")
+    brand_name: Optional[str] = Field(None, alias="brandName")
     condition: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[str] = Field(None, alias="createdAt")
+    updated_at: Optional[str] = Field(None, alias="updatedAt")
 

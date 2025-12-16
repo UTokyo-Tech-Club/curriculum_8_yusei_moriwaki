@@ -198,12 +198,10 @@ class ItemRepository:
             item_id=item_id,
             name=title,
             description=description,
-            price=int(price),
-            category_name=category,
+            price=price,
+            c0_name=category,  # Use c0_name for primary category
             brand_name=brand_name,
-            item_condition_name=condition,
-            num_likes=0,
-            num_comments=0
+            item_condition_name=condition
         )
         self.db.add(mercari_item)
         await self.db.flush()  # Flush to get the id

@@ -18,11 +18,12 @@ async def create_purchase(
     purchase_service: PurchaseService = Depends(get_purchase_service)
 ):
     """Create a new purchase (requires authentication)."""
+    print(f"DEBUG: Received purchase request - item_id: {request.item_id}, payment_method: {request.payment_method}, user_id: {user_id}")
     try:
         purchase = await purchase_service.create_purchase(
             buyer_user_id=user_id,
             item_listing_id=request.item_id,
-            payment_method=request.payment_method.value,
+            payment_method=request.payment_method,
             shipping_name=request.shipping_address.name,
             shipping_postal_code=request.shipping_address.postal_code,
             shipping_prefecture=request.shipping_address.prefecture,
@@ -33,10 +34,14 @@ async def create_purchase(
         )
         return purchase
     except ValueError as e:
+        print(f"DEBUG: ValueError in create_purchase: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except Exception as e:
+        print(f"DEBUG: Unexpected error in create_purchase: {type(e).__name__}: {str(e)}")
+        raise
 
 
 @router.get("/{purchase_id}", response_model=PurchaseResponse)

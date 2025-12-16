@@ -63,15 +63,15 @@ class PurchaseService:
 
         return {
             "id": str(purchase.id),
-            "item_id": str(item_listing_id),
-            "item_title": item["title"] if item else "Unknown",
-            "item_price": item["price"] if item else 0,
-            "item_image": item["images"][0] if item and item["images"] else "",
-            "buyer_id": str(purchase.buyer_user_id),
-            "seller_id": item["seller_id"] if item else "",
-            "status": purchase.status.value,
-            "created_at": purchase.created_at.isoformat() if purchase.created_at else None,
-            "completed_at": purchase.completed_at.isoformat() if purchase.completed_at else None,
+            "itemId": str(item_listing_id),
+            "itemTitle": item["title"] if item else "Unknown",
+            "itemPrice": item["price"] if item else 0.0,
+            "itemImage": item["images"][0] if item and item["images"] else "",
+            "buyerId": str(purchase.buyer_user_id),
+            "sellerId": item["seller_id"] if item else "",
+            "status": purchase.status,
+            "createdAt": purchase.created_at.isoformat() if purchase.created_at else None,
+            "completedAt": purchase.completed_at.isoformat() if purchase.completed_at else None,
         }
 
     async def get_purchase(self, purchase_id: int) -> Optional[Dict[str, Any]]:
@@ -85,15 +85,15 @@ class PurchaseService:
 
         return {
             "id": str(purchase.id),
-            "item_id": str(purchase.item_listing_id),
-            "item_title": item["title"] if item else "Unknown",
-            "item_price": item["price"] if item else 0,
-            "item_image": item["images"][0] if item and item["images"] else "",
-            "buyer_id": str(purchase.buyer_user_id),
-            "seller_id": item["seller_id"] if item else "",
-            "status": purchase.status.value,
-            "created_at": purchase.created_at.isoformat() if purchase.created_at else None,
-            "completed_at": purchase.completed_at.isoformat() if purchase.completed_at else None,
+            "itemId": str(purchase.item_listing_id),
+            "itemTitle": item["title"] if item else "Unknown",
+            "itemPrice": item["price"] if item else 0.0,
+            "itemImage": item["images"][0] if item and item["images"] else "",
+            "buyerId": str(purchase.buyer_user_id),
+            "sellerId": item["seller_id"] if item else "",
+            "status": purchase.status,
+            "createdAt": purchase.created_at.isoformat() if purchase.created_at else None,
+            "completedAt": purchase.completed_at.isoformat() if purchase.completed_at else None,
         }
 
     async def get_purchase_history(self, buyer_user_id: int) -> List[Dict[str, Any]]:
@@ -105,15 +105,15 @@ class PurchaseService:
             item = await self.item_repo.get_item_with_details(purchase.item_listing_id)
             result.append({
                 "id": str(purchase.id),
-                "item_id": str(purchase.item_listing_id),
-                "item_title": item["title"] if item else "Unknown",
-                "item_price": item["price"] if item else 0,
-                "item_image": item["images"][0] if item and item["images"] else "",
-                "buyer_id": str(purchase.buyer_user_id),
-                "seller_id": item["seller_id"] if item else "",
-                "status": purchase.status.value,
-                "created_at": purchase.created_at.isoformat() if purchase.created_at else None,
-                "completed_at": purchase.completed_at.isoformat() if purchase.completed_at else None,
+                "itemId": str(purchase.item_listing_id),
+                "itemTitle": item["title"] if item else "Unknown",
+                "itemPrice": item["price"] if item else 0.0,
+                "itemImage": item["images"][0] if item and item["images"] else "",
+                "buyerId": str(purchase.buyer_user_id),
+                "sellerId": item["seller_id"] if item else "",
+                "status": purchase.status,
+                "createdAt": purchase.created_at.isoformat() if purchase.created_at else None,
+                "completedAt": purchase.completed_at.isoformat() if purchase.completed_at else None,
             })
         
         return result
