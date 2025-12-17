@@ -38,3 +38,5 @@ class FavoriteService:
         """Check if an item is favorited by a user."""
         return await self.favorite_repo.is_favorited(user_id, item_id)
 
+
+

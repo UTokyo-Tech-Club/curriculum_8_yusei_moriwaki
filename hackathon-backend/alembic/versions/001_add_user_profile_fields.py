@@ -29,3 +29,5 @@ def downgrade() -> None:
     op.drop_column('users', 'location')
     op.drop_column('users', 'bio')
 
+
+

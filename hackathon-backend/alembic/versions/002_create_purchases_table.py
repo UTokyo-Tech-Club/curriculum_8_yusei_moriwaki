@@ -54,3 +54,5 @@ def downgrade() -> None:
     # op.execute("DROP TYPE IF EXISTS paymentmethod")
     # op.execute("DROP TYPE IF EXISTS purchasestatus")
 
+
+

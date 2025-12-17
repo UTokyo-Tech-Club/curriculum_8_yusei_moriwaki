@@ -1,0 +1,76 @@
+# Configuration for Mercari Item Similarity Optimization
+
+# Data loading parameters
+data:
+  # Number of records to load from Hugging Face
+  sample_limit: 100000  # Increased for Phase 1 (was 50000)
+  
+  # Maximum sequence distance to consider when generating pairs
+  # Higher values = more pairs but slower processing
+  max_sequence_distance: 10
+  
+  # Number of sessions to sample (null = use all sessions)
+  sample_sessions: null
+  
+  # Minimum number of items in a session to be included
+  min_session_length: 2
+  
+  # Hugging Face dataset name
+  dataset_name: "mercari-us/merrec"
+
+# Model parameters
+model:
+  # Decay rate for sequence distance scoring
+  # Score = decay_rate ^ sequence_distance
+  # Lower values = stronger decay (closer items matter more)
+  decay_rate: 0.8
+  
+  # Feature weight ranges for optimization [min, max]
+  # IMPROVED v3: Added SEQUENCE DISTANCE features (Phase 1)
+  # Intercept: baseline similarity when no features match (resolves bias)
+  # Each weight represents the relative importance of that feature
+  feature_weights:
+    intercept: [-0.5, 0.5]  # Baseline similarity (can be negative to correct bias)
+    c0: [0.0, 1.0]      # Category level 0 (broadest)
+    c1: [0.0, 1.0]      # Category level 1
+    c2: [0.0, 1.0]      # Category level 2 (most specific)
+    brand: [0.0, 1.0]   # Brand match
+    condition: [0.0, 1.0]  # Item condition
+    size: [0.0, 1.0]    # Size match
+    match_count: [0.0, 1.0]  # Total number of matching features (0-6)
+    category_hierarchy_score: [0.0, 1.0]  # Weighted category match (0.0-1.0)
+    both_have_size: [0.0, 1.0]  # Both items have size info
+    # Phase 1b: Only seq_distance_log (removed redundant features to avoid multicollinearity)
+    seq_distance_log: [0.0, 1.0]  # Log-scaled distance
+    # Phase 1c: Interaction features (capture how distance effect varies by category/brand)
+    seq_dist_x_category: [0.0, 1.0]  # seq_distance_log × is_same_category
+    seq_dist_x_brand: [0.0, 1.0]  # seq_distance_log × is_same_brand
+
+# Optimization parameters
+optimization:
+  # Number of Optuna trials to run
+  n_trials: 200  # Increased for Phase 1 (was 100)
+  
+  # Validation set fraction (0.2 = 20% validation, 80% training)
+  validation_split: 0.2
+  
+  # Random seed for reproducibility
+  random_seed: 42
+  
+  # Timeout in seconds (null = no timeout)
+  timeout: null
+
+# Output settings
+output:
+  # Directory for results
+  results_dir: "results/models"
+  
+  # Directory for logs
+  log_dir: "results/logs"
+  
+  # Logging level: DEBUG, INFO, WARNING, ERROR
+  log_level: "INFO"
+  
+  # Save intermediate results every N trials (null = only save final)
+  save_frequency: null
+

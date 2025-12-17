@@ -1,0 +1,116 @@
+# Example Configuration for Mercari Item Similarity Optimization
+# Copy this file to config.yaml and adjust parameters as needed
+
+# Data loading parameters
+data:
+  # Number of records to load from Hugging Face
+  # Larger values = better training but slower and more memory
+  # Recommended: 10000-100000 for experimentation, 100000+ for production
+  sample_limit: 50000
+  
+  # Maximum sequence distance to consider when generating pairs
+  # Higher values = more pairs but exponentially more memory
+  # Recommended: 5-15
+  max_sequence_distance: 10
+  
+  # Number of sessions to sample (null = use all sessions)
+  # Use this to limit pair generation for faster experimentation
+  # Example: 5000 sessions for quick tests
+  sample_sessions: null
+  
+  # Minimum number of items in a session to be included
+  # Sessions with fewer items are skipped
+  min_session_length: 2
+  
+  # Hugging Face dataset name (don't change unless using different dataset)
+  dataset_name: "mercari-us/merrec"
+
+# Model parameters
+model:
+  # Decay rate for sequence distance scoring
+  # Score = decay_rate ^ sequence_distance
+  # Examples:
+  #   0.9 = slow decay (items far apart still related)
+  #   0.8 = medium decay (recommended default)
+  #   0.7 = fast decay (only close items are related)
+  decay_rate: 0.8
+  
+  # Feature weight ranges for optimization [min, max]
+  # IMPROVED MODEL v2: Normalized weights with INTERCEPT + Advanced Features
+  # The model now divides by sum of weights, so these represent relative importance
+  # INTERCEPT: Baseline similarity when no features match
+  #   - Positive intercept: items are somewhat similar by default
+  #   - Negative intercept: items need feature matches to be considered similar
+  #   - This resolves the systematic bias issue (predictions were ~0.04 too low)
+  # ADVANCED FEATURES: Capture more complex patterns
+  #   - match_count: How many features match (captures overall similarity)
+  #   - category_hierarchy_score: Weighted category match (0.3*c0 + 0.3*c1 + 0.4*c2)
+  #   - both_have_size: Both items have size data (even if they don't match)
+  feature_weights:
+    intercept: [-0.5, 0.5]  # Baseline similarity (typically 0.0 to 0.2)
+    c0: [0.0, 1.0]      # Category level 0 (Women, Men, etc.)
+    c1: [0.0, 1.0]      # Category level 1 (Clothing, Accessories, etc.)
+    c2: [0.0, 1.0]      # Category level 2 (Tops, Bottoms, etc.)
+    brand: [0.0, 1.0]   # Brand match (Nike, Adidas, etc.)
+    condition: [0.0, 1.0]  # Item condition (New, Like New, etc.)
+    size: [0.0, 1.0]    # Size match (S, M, L, etc.)
+    match_count: [0.0, 1.0]  # Total matches (0-6 range, normalized)
+    category_hierarchy_score: [0.0, 1.0]  # Hierarchical category similarity
+    both_have_size: [0.0, 1.0]  # Both items have size (signal of completeness)
+
+# Optimization parameters
+optimization:
+  # Number of Optuna trials to run
+  # More trials = better results but longer runtime
+  # Recommended: 50-100 for quick tests, 200-500 for production
+  n_trials: 100
+  
+  # Validation set fraction
+  # Recommended: 0.2 (20% validation, 80% training)
+  validation_split: 0.2
+  
+  # Random seed for reproducibility
+  # Change this to get different optimization results
+  random_seed: 42
+  
+  # Timeout in seconds (null = no timeout)
+  # Example: 3600 for 1 hour timeout
+  timeout: null
+
+# Output settings
+output:
+  # Directory for results (JSON files with optimized parameters)
+  results_dir: "results/models"
+  
+  # Directory for logs (detailed execution logs)
+  log_dir: "results/logs"
+  
+  # Logging level
+  # DEBUG: Very detailed (for debugging)
+  # INFO: Standard output (recommended)
+  # WARNING: Only warnings and errors
+  # ERROR: Only errors
+  log_level: "INFO"
+  
+  # Save intermediate results every N trials (null = only save final)
+  # Example: 10 to save checkpoint every 10 trials
+  save_frequency: null
+
+# Example configurations for different scenarios:
+
+# Quick test (fast, small data):
+# data.sample_limit: 10000
+# data.max_sequence_distance: 5
+# optimization.n_trials: 20
+
+# Medium experiment (balanced):
+# data.sample_limit: 50000
+# data.max_sequence_distance: 10
+# optimization.n_trials: 100
+
+# Production run (best results):
+# data.sample_limit: 200000
+# data.max_sequence_distance: 15
+# optimization.n_trials: 500
+# optimization.timeout: 7200  # 2 hours
+

@@ -29,9 +29,9 @@ class UserService:
             "avatar": user.avatar,
             "bio": user.bio,
             "location": user.location,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-            "items_count": items_count,
-            "purchases_count": purchases_count,
+            "createdAt": user.created_at.isoformat() if user.created_at else None,
+            "itemsCount": items_count,
+            "purchasesCount": purchases_count,
         }
 
     async def update_user_profile(
@@ -61,6 +61,6 @@ class UserService:
             "avatar": user.avatar,
             "bio": user.bio,
             "location": user.location,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "createdAt": user.created_at.isoformat() if user.created_at else None,
         }
 

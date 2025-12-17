@@ -78,3 +78,5 @@ async def check_auth(
     """Check if user is authenticated."""
     return {"authenticated": True, "user_id": user_id}
 
+
+

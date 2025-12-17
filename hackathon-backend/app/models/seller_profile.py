@@ -30,3 +30,5 @@ class SellerProfile(Base):
     def __repr__(self):
         return f"<SellerProfile(id={self.id}, user_id={self.user_id}, shop_name='{self.shop_name}')>"
 
+
+

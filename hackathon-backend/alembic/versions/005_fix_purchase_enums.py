@@ -56,3 +56,5 @@ def downgrade() -> None:
         ENUM('PENDING', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'PENDING'
     """)
 
+
+

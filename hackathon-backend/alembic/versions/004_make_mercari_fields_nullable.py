@@ -35,3 +35,5 @@ def downgrade():
     op.alter_column('mercari_items', 'sequence_length', existing_type=sa.Integer(), nullable=False)
     op.alter_column('mercari_items', 'event_id', existing_type=sa.String(50), nullable=False)
 
+
+

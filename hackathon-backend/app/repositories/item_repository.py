@@ -5,7 +5,6 @@ Joins item_listings with mercari_items for full item details.
 from typing import List, Optional, Dict, Any
 from sqlalchemy import select, func, and_, or_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 
 from app.models.item_listing import ItemListing, ListingStatus
 from app.models.mercari_item import MercariItem
@@ -87,7 +86,11 @@ class ItemRepository:
 
         # Apply filters
         if category:
-            query = query.where(MercariItem.c0_name.ilike(f"%{category}%"))
+            # Reverse map frontend category to backend c0_name values
+            c0_names = self._reverse_map_category(category)
+            if c0_names:
+                c0_conditions = [MercariItem.c0_name.ilike(f"%{name}%") for name in c0_names]
+                query = query.where(or_(*c0_conditions))
         
         if status:
             if status == "available":
@@ -151,11 +154,52 @@ class ItemRepository:
 
     async def get_recommended(self, item_id: int, category: str, limit: int = 6) -> List[Dict[str, Any]]:
         """Get recommended items from the same category, excluding the given item."""
-        return await self.get_items_with_details(
-            category=category,
-            status="available",
-            limit=limit
+        # Reverse map frontend category to Mercari c0_name values
+        c0_names = self._reverse_map_category(category)
+        
+        if not c0_names:
+            return []
+        
+        # Subquery to get one representative mercari_item per item_id
+        subq = (
+            select(
+                MercariItem.item_id,
+                func.min(MercariItem.id).label('min_id')
+            )
+            .group_by(MercariItem.item_id)
+            .subquery()
         )
+
+        query = (
+            select(ItemListing, MercariItem, User)
+            .join(subq, ItemListing.item_id == subq.c.item_id)
+            .join(MercariItem, and_(
+                MercariItem.item_id == ItemListing.item_id,
+                MercariItem.id == subq.c.min_id
+            ))
+            .join(User, ItemListing.seller_user_id == User.id)
+        )
+
+        # Filter by multiple c0_names using OR (match any of the category names)
+        c0_conditions = [MercariItem.c0_name.ilike(f"%{name}%") for name in c0_names]
+        query = query.where(or_(*c0_conditions))
+        
+        # Exclude the current item by item_id
+        query = query.where(ItemListing.item_id != item_id)
+        
+        # Only show available items
+        query = query.where(ItemListing.status == ListingStatus.ACTIVE)
+        
+        # Order by listed_at descending (newest first)
+        query = query.order_by(desc(ItemListing.listed_at))
+        
+        # Pagination
+        query = query.limit(limit)
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        return [self._combine_item_data(listing, mercari, seller) for listing, mercari, seller in rows]
 
     async def create_listing(
         self,
@@ -269,22 +313,22 @@ class ItemRepository:
         """Combine ItemListing and MercariItem data into a single dict."""
         return {
             "id": str(listing.id),
-            "item_id": listing.item_id,
+            "itemId": listing.item_id,
             "title": mercari.name or "No title",
             "description": mercari.name or "No description",
             "price": float(mercari.price) if mercari.price else 0.0,
             "images": [],  # Placeholder - no images in DB yet
             "category": self._map_category(mercari.c0_name),
             "status": listing.status.value,
-            "seller_id": str(listing.seller_user_id),
-            "seller_name": seller.name,
-            "seller_avatar": seller.avatar,
-            "views_count": listing.views_count,
-            "likes_count": listing.likes_count,
-            "brand_name": mercari.brand_name,
+            "sellerId": str(listing.seller_user_id),
+            "sellerName": seller.name,
+            "sellerAvatar": seller.avatar,
+            "viewsCount": listing.views_count,
+            "likesCount": listing.likes_count,
+            "brandName": mercari.brand_name,
             "condition": mercari.item_condition_name,
-            "created_at": listing.listed_at.isoformat() if listing.listed_at else None,
-            "updated_at": listing.listed_at.isoformat() if listing.listed_at else None,
+            "createdAt": listing.listed_at.isoformat() if listing.listed_at else None,
+            "updatedAt": listing.listed_at.isoformat() if listing.listed_at else None,
         }
 
     def _map_category(self, c0_name: Optional[str]) -> str:
@@ -307,4 +351,14 @@ class ItemRepository:
                 return value
         
         return "other"
+    
+    def _reverse_map_category(self, category: str) -> List[str]:
+        """Reverse map frontend category enum to Mercari c0_name values."""
+        reverse_map = {
+            "fashion": ["women", "men", "beauty"],
+            "home": ["home"],
+            "sports": ["sports"],
+            "other": ["vintage", "other"]
+        }
+        return reverse_map.get(category.lower(), ["other"])
 

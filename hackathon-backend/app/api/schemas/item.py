@@ -52,23 +52,23 @@ class ItemUpdateRequest(BaseModel):
 
 class ItemResponse(BaseModel):
     """Response schema for item data."""
-    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+    model_config = ConfigDict(populate_by_name=True)
     
     id: str
-    item_id: int = Field(alias="itemId")
+    itemId: int
     title: str
     description: str
     price: float
     images: List[str]
     category: str
     status: str
-    seller_id: str = Field(alias="sellerId")
-    seller_name: str = Field(alias="sellerName")
-    seller_avatar: Optional[str] = Field(None, alias="sellerAvatar")
-    views_count: int = Field(alias="viewsCount")
-    likes_count: int = Field(alias="likesCount")
-    brand_name: Optional[str] = Field(None, alias="brandName")
+    sellerId: str
+    sellerName: str
+    sellerAvatar: Optional[str] = None
+    viewsCount: int
+    likesCount: int
+    brandName: Optional[str] = None
     condition: Optional[str] = None
-    created_at: Optional[str] = Field(None, alias="createdAt")
-    updated_at: Optional[str] = Field(None, alias="updatedAt")
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
 

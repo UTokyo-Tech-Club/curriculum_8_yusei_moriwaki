@@ -1,12 +1,15 @@
 """
 Purchase API routes.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 
 from app.api.schemas.purchase import PurchaseCreateRequest, PurchaseResponse
 from app.services.purchase_service import PurchaseService
 from app.dependencies import get_purchase_service, get_current_user_id
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/purchases", tags=["Purchases"])
 
@@ -18,7 +21,10 @@ async def create_purchase(
     purchase_service: PurchaseService = Depends(get_purchase_service)
 ):
     """Create a new purchase (requires authentication)."""
-    print(f"DEBUG: Received purchase request - item_id: {request.item_id}, payment_method: {request.payment_method}, user_id: {user_id}")
+    logger.debug(
+        f"Received purchase request - item_id: {request.item_id}, "
+        f"payment_method: {request.payment_method}, user_id: {user_id}"
+    )
     try:
         purchase = await purchase_service.create_purchase(
             buyer_user_id=user_id,
@@ -34,13 +40,13 @@ async def create_purchase(
         )
         return purchase
     except ValueError as e:
-        print(f"DEBUG: ValueError in create_purchase: {str(e)}")
+        logger.warning(f"ValueError in create_purchase: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
-        print(f"DEBUG: Unexpected error in create_purchase: {type(e).__name__}: {str(e)}")
+        logger.error(f"Unexpected error in create_purchase: {type(e).__name__}: {str(e)}", exc_info=True)
         raise
 
 

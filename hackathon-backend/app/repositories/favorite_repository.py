@@ -72,3 +72,5 @@ class FavoriteRepository:
         favorite = await self.get_favorite(user_id, item_id)
         return favorite is not None
 
+
+

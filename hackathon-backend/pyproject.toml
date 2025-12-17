@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "hackathon-backend"
+version = "0.1.0"
+description = "Hackathon Backend API"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.0"  # 2.x 系に統一
+langchain-core = ">=0.3.72,<1.0.0"
+langchain-openai = ">=0.3.0,<1.0.0"
+fastapi = ">=0.100.0"
+uvicorn = {extras = ["standard"], version = ">=0.23.0"}
+sqlalchemy = "2.0.25"
+alembic = "1.13.1"
+aiomysql = "0.2.0"
+pymysql = "1.1.0"
+cryptography = "41.0.7"
+pyjwt = "2.8.0"
+pydantic-settings = "2.1.0"
+python-dotenv = "1.0.0"
+email-validator = "2.1.0"
+greenlet = "3.0.3"
+openai = ">=1.0.0"
+httpx = ">=0.24.0,<1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

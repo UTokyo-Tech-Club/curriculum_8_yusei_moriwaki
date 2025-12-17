@@ -30,3 +30,5 @@ class Favorite(Base):
     def __repr__(self):
         return f"<Favorite(id={self.id}, user_id={self.user_id}, item_id={self.item_id})>"
 
+
+

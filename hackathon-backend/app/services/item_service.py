@@ -55,15 +55,20 @@ class ItemService:
             return []
 
         category = item.get("category", "other")
+        item_id = item.get("itemId")  # Use itemId from the combined data
+        
+        if not item_id:
+            return []
         
         # Get items from same category, excluding current item
+        # Note: get_recommended already excludes by item_id, but we also filter by listing_id as backup
         items = await self.item_repo.get_recommended(
-            item_id=item["item_id"],
+            item_id=item_id,
             category=category,
-            limit=limit
+            limit=limit + 1  # Get one extra in case current item is in results
         )
         
-        # Filter out the current item
+        # Filter out the current item by listing_id (additional safety check)
         return [i for i in items if i["id"] != str(listing_id)][:limit]
 
     async def create_item(

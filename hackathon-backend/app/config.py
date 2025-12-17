@@ -2,30 +2,37 @@
 Configuration module for the application.
 Loads environment variables and provides database URL.
 """
-import os
 from typing import Optional
 from urllib.parse import quote_plus
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+    )
+    
     # Database configuration
-    MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
-    MYSQL_USER: str = os.getenv("MYSQL_USER", "root")
-    MYSQL_PWD: str = os.getenv("MYSQL_PWD", "")
-    MYSQL_DATABASE: str = os.getenv("MYSQL_DATABASE", "hackathon")
+    MYSQL_HOST: str = "localhost"
+    MYSQL_USER: str = "root"
+    MYSQL_PWD: str = ""
+    MYSQL_DATABASE: str = "hackathon"
     
     # Database SSL certificates (for Cloud SQL)
-    MYSQL_SSL_CA: Optional[str] = os.getenv("MYSQL_SSL_CA")
-    MYSQL_SSL_CERT: Optional[str] = os.getenv("MYSQL_SSL_CERT")
-    MYSQL_SSL_KEY: Optional[str] = os.getenv("MYSQL_SSL_KEY")
+    MYSQL_SSL_CA: Optional[str] = None
+    MYSQL_SSL_CERT: Optional[str] = None
+    MYSQL_SSL_KEY: Optional[str] = None
     
     # JWT Configuration (dummy)
     JWT_SECRET_KEY: str = "dummy-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_DAYS: int = 7
+    
+    # OpenAI Configuration
+    OPENAI_API_KEY: Optional[str] = None
     
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
@@ -48,10 +55,6 @@ class Settings(BaseSettings):
         user = quote_plus(self.MYSQL_USER)
         pwd = quote_plus(self.MYSQL_PWD)
         return f"mysql+pymysql://{user}:{pwd}@{self.MYSQL_HOST}/{self.MYSQL_DATABASE}"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 # Global settings instance

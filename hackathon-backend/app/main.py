@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.api.routes import auth, items, users, favorites, purchases
+from app.api import delta
 
 # Create FastAPI app
 app = FastAPI(
@@ -31,6 +32,7 @@ app.include_router(items.router, prefix=settings.API_V1_PREFIX)
 app.include_router(users.router, prefix=settings.API_V1_PREFIX)
 app.include_router(favorites.router, prefix=settings.API_V1_PREFIX)
 app.include_router(purchases.router, prefix=settings.API_V1_PREFIX)
+app.include_router(delta.router)  # Delta router already has /api/delta prefix
 
 
 @app.get("/")
