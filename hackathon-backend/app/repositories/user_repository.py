@@ -10,6 +10,8 @@ from app.models.user import User
 from app.models.seller_profile import SellerProfile
 from app.models.item_listing import ItemListing
 from app.models.purchase import Purchase
+from app.domain.entities.user import UserEntity
+from app.domain.mappers.user_mapper import UserMapper
 
 
 class UserRepository:
@@ -18,30 +20,33 @@ class UserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, user_id: int) -> Optional[User]:
+    async def get_by_id(self, user_id: int) -> Optional[UserEntity]:
         """Get user by ID."""
         result = await self.db.execute(
             select(User).where(User.id == user_id)
         )
-        return result.scalar_one_or_none()
+        orm_model = result.scalar_one_or_none()
+        return UserMapper.to_domain(orm_model)
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> Optional[UserEntity]:
         """Get user by email."""
         result = await self.db.execute(
             select(User).where(User.email == email)
         )
-        return result.scalar_one_or_none()
+        orm_model = result.scalar_one_or_none()
+        return UserMapper.to_domain(orm_model)
 
-    async def get_with_seller_profile(self, user_id: int) -> Optional[User]:
+    async def get_with_seller_profile(self, user_id: int) -> Optional[UserEntity]:
         """Get user with seller profile eagerly loaded."""
         result = await self.db.execute(
             select(User)
             .options(selectinload(User.seller_profile))
             .where(User.id == user_id)
         )
-        return result.scalar_one_or_none()
+        orm_model = result.scalar_one_or_none()
+        return UserMapper.to_domain(orm_model)
 
-    async def create(self, email: str, name: str, avatar: Optional[str] = None) -> User:
+    async def create(self, email: str, name: str, avatar: Optional[str] = None) -> UserEntity:
         """Create a new user."""
         # Generate a unique user ID (simple timestamp-based for now)
         import time
@@ -56,7 +61,7 @@ class UserRepository:
         self.db.add(user)
         await self.db.commit()
         await self.db.refresh(user)
-        return user
+        return UserMapper.to_domain(user)
 
     async def update(
         self,
@@ -65,9 +70,13 @@ class UserRepository:
         avatar: Optional[str] = None,
         bio: Optional[str] = None,
         location: Optional[str] = None
-    ) -> Optional[User]:
+    ) -> Optional[UserEntity]:
         """Update user information."""
-        user = await self.get_by_id(user_id)
+        # Get the ORM model directly for update
+        result = await self.db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
         if not user:
             return None
 
@@ -82,7 +91,7 @@ class UserRepository:
 
         await self.db.commit()
         await self.db.refresh(user)
-        return user
+        return UserMapper.to_domain(user)
 
     async def get_items_count(self, user_id: int) -> int:
         """Get count of items listed by user."""

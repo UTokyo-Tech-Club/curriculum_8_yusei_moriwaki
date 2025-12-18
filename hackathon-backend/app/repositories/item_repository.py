@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.item_listing import ItemListing, ListingStatus
 from app.models.mercari_item import MercariItem
 from app.models.user import User
+from app.domain.entities.item import ItemEntity
+from app.domain.mappers.item_mapper import ItemMapper
 
 
 class ItemRepository:
