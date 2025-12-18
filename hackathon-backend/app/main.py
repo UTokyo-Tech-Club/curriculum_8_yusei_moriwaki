@@ -5,8 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.api.routes import auth, items, users, favorites, purchases
-from app.api import delta
+from app.api.routes import auth, items, users, favorites, purchases, delta
 
 # Create FastAPI app
 app = FastAPI(

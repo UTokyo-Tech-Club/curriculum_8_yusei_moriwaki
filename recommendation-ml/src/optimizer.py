@@ -4,7 +4,7 @@ Item similarity optimizer using Optuna for hyperparameter tuning.
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import optuna
