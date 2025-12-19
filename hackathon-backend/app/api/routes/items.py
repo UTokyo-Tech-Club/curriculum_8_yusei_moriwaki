@@ -1,7 +1,7 @@
 """
 Items API routes.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from typing import List, Optional
 
 from app.api.schemas.item import (
@@ -11,6 +11,7 @@ from app.api.schemas.item import (
 )
 from app.services.item_service import ItemService
 from app.dependencies import get_item_service, get_current_user_id
+from app.utils.image_generator import generate_item_image
 
 router = APIRouter(prefix="/items", tags=["Items"])
 
@@ -146,5 +147,29 @@ async def delete_item(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e)
+        )
+
+
+@router.get("/generated-image/{title:path}")
+async def get_generated_image(
+    title: str,
+    width: int = Query(800, ge=100, le=2000),
+    height: int = Query(800, ge=100, le=2000)
+):
+    """
+    Generate a placeholder image for an item based on its title.
+    Returns a PNG image with a solid color background and centered title text.
+    """
+    try:
+        image_bytes = generate_item_image(title, width, height)
+        return Response(
+            content=image_bytes,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=31536000"}  # Cache for 1 year
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"画像の生成に失敗しました: {str(e)}"
         )
 

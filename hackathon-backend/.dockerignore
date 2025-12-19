@@ -1,0 +1,57 @@
+# Exclude other Dockerfiles and unrelated directories
+../cd/
+../docker-1/
+../mysql/
+../react-to-python/
+../react/
+../html/
+../js1/
+../js2/
+../js3/
+../js4/
+../oscommand/
+../part2/
+../part3/
+../part4/
+../recommendation-ml/
+../structured_data/
+../venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Alembic versions (keep the migrations, but ignore cache)
+alembic/versions/__pycache__/
+
+# Scripts (optional - remove if you need them in the container)
+scripts/
+
+# Docs
+docs/
+

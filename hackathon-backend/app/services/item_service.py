@@ -5,6 +5,8 @@ from typing import List, Optional, Dict, Any
 
 from app.repositories.item_repository import ItemRepository
 from app.repositories.user_repository import UserRepository
+from app.utils.image_validator import validate_image_urls
+from app.utils.image_generator import generate_image_data_url
 
 
 class ItemService:
@@ -25,7 +27,7 @@ class ItemService:
         offset: int = 0
     ) -> List[Dict[str, Any]]:
         """Get items with filters."""
-        return await self.item_repo.get_items_with_details(
+        items = await self.item_repo.get_items_with_details(
             category=category,
             status=status,
             min_price=min_price,
@@ -34,14 +36,38 @@ class ItemService:
             limit=limit,
             offset=offset
         )
+        
+        # Generate images for items that don't have any
+        for item in items:
+            if not item.get("images") or len(item.get("images", [])) == 0:
+                title = item.get("title", "Item")
+                generated_image_url = generate_image_data_url(title)
+                item["images"] = [generated_image_url]
+        
+        return items
 
     async def get_item(self, listing_id: int) -> Optional[Dict[str, Any]]:
         """Get a single item by listing ID."""
-        return await self.item_repo.get_item_with_details(listing_id)
+        item = await self.item_repo.get_item_with_details(listing_id)
+        if item and (not item.get("images") or len(item.get("images", [])) == 0):
+            # Generate image if missing
+            title = item.get("title", "Item")
+            generated_image_url = generate_image_data_url(title)
+            item["images"] = [generated_image_url]
+        return item
 
     async def get_user_items(self, user_id: int) -> List[Dict[str, Any]]:
         """Get all items listed by a user."""
-        return await self.item_repo.get_by_seller(user_id)
+        items = await self.item_repo.get_by_seller(user_id)
+        
+        # Generate images for items that don't have any
+        for item in items:
+            if not item.get("images") or len(item.get("images", [])) == 0:
+                title = item.get("title", "Item")
+                generated_image_url = generate_image_data_url(title)
+                item["images"] = [generated_image_url]
+        
+        return items
 
     async def get_recommended_items(
         self,
@@ -69,7 +95,16 @@ class ItemService:
         )
         
         # Filter out the current item by listing_id (additional safety check)
-        return [i for i in items if i["id"] != str(listing_id)][:limit]
+        filtered_items = [i for i in items if i["id"] != str(listing_id)][:limit]
+        
+        # Generate images for items that don't have any
+        for item in filtered_items:
+            if not item.get("images") or len(item.get("images", [])) == 0:
+                title = item.get("title", "Item")
+                generated_image_url = generate_image_data_url(title)
+                item["images"] = [generated_image_url]
+        
+        return filtered_items
 
     async def create_item(
         self,
@@ -106,6 +141,28 @@ class ItemService:
         if not item:
             raise ValueError("商品の作成に失敗しました")
         
+        # Validate image URLs and generate placeholder if all are invalid
+        final_images = images.copy() if images else []
+        
+        if final_images:
+            valid_urls, invalid_urls = await validate_image_urls(final_images)
+            
+            # If all URLs are invalid, generate a seed image
+            if not valid_urls:
+                # Generate image data URL from title
+                generated_image_url = generate_image_data_url(title)
+                final_images = [generated_image_url]
+            else:
+                # Use only valid URLs
+                final_images = valid_urls
+        else:
+            # No images provided, generate one from title
+            generated_image_url = generate_image_data_url(title)
+            final_images = [generated_image_url]
+        
+        # Add images to the response (images are not stored in DB yet, so we add them here)
+        item["images"] = final_images
+        
         return item
 
     async def update_item(
@@ -127,7 +184,15 @@ class ItemService:
         await self.item_repo.update_listing(listing_id, status=status)
 
         # Return updated item
-        return await self.item_repo.get_item_with_details(listing_id)
+        item = await self.item_repo.get_item_with_details(listing_id)
+        
+        # Generate image if missing
+        if item and (not item.get("images") or len(item.get("images", [])) == 0):
+            title = item.get("title", "Item")
+            generated_image_url = generate_image_data_url(title)
+            item["images"] = [generated_image_url]
+        
+        return item
 
     async def delete_item(self, listing_id: int, user_id: int) -> bool:
         """Delete an item listing."""
