@@ -1,11 +1,44 @@
 """
 FastAPI application entry point.
 """
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.api.routes import auth, items, users, favorites, purchases, delta
+from app.services.pinecone_service import pinecone_service
+from app.services.ml_weights_service import ml_weights_service
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events."""
+    # Startup
+    logger.info("Starting up application...")
+    
+    # Initialize Pinecone
+    try:
+        await pinecone_service.initialize()
+        logger.info("Pinecone initialized successfully")
+    except Exception as e:
+        logger.warning(f"Pinecone initialization failed: {e}. Vector search will be disabled.")
+    
+    # ML weights are loaded on import, just log
+    weights = ml_weights_service.get_all_weights()
+    if weights:
+        logger.info(f"ML weights loaded: {len(weights)} features")
+    else:
+        logger.warning("No ML weights loaded. Using default weights.")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down application...")
 
 # Create FastAPI app
 app = FastAPI(
@@ -13,7 +46,8 @@ app = FastAPI(
     description="4-layer architecture backend with FastAPI, SQLAlchemy, and Alembic",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Configure CORS

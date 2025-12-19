@@ -317,10 +317,14 @@ class ItemRepository:
             "id": str(listing.id),
             "itemId": listing.item_id,
             "title": mercari.name or "No title",
-            "description": mercari.name or "No description",
+            "name": mercari.name or "No title",  # Alias for embedding service
+            "description": mercari.description or mercari.name or "No description",
             "price": float(mercari.price) if mercari.price else 0.0,
             "images": [],  # Placeholder - no images in DB yet
             "category": self._map_category(mercari.c0_name),
+            "c0_name": mercari.c0_name,  # For similarity calculation
+            "c1_name": mercari.c1_name,  # For similarity calculation
+            "c2_name": mercari.c2_name,  # For similarity calculation
             "status": listing.status.value,
             "sellerId": str(listing.seller_user_id),
             "sellerName": seller.name,
@@ -328,7 +332,10 @@ class ItemRepository:
             "viewsCount": listing.views_count,
             "likesCount": listing.likes_count,
             "brandName": mercari.brand_name,
+            "brand_name": mercari.brand_name,  # Alias for similarity calculation
             "condition": mercari.item_condition_name,
+            "item_condition_name": mercari.item_condition_name,  # Alias for similarity calculation
+            "size_name": mercari.size_name,  # For similarity calculation
             "createdAt": listing.listed_at.isoformat() if listing.listed_at else None,
             "updatedAt": listing.listed_at.isoformat() if listing.listed_at else None,
         }
@@ -363,4 +370,70 @@ class ItemRepository:
             "other": ["vintage", "other"]
         }
         return reverse_map.get(category.lower(), ["other"])
+    
+    async def get_item_with_details_by_item_id(self, item_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get a single item with full details by item_id (not listing_id).
+        Joins item_listings with mercari_items to get complete info.
+        """
+        # Subquery to get one representative mercari_item per item_id
+        subq = (
+            select(
+                MercariItem.item_id,
+                func.min(MercariItem.id).label('min_id')
+            )
+            .group_by(MercariItem.item_id)
+            .subquery()
+        )
+
+        result = await self.db.execute(
+            select(ItemListing, MercariItem, User)
+            .join(subq, ItemListing.item_id == subq.c.item_id)
+            .join(MercariItem, and_(
+                MercariItem.item_id == ItemListing.item_id,
+                MercariItem.id == subq.c.min_id
+            ))
+            .join(User, ItemListing.seller_user_id == User.id)
+            .where(ItemListing.item_id == item_id)
+            .limit(1)
+        )
+        row = result.first()
+
+        if not row:
+            return None
+
+        listing, mercari, seller = row
+        return self._combine_item_data(listing, mercari, seller)
+    
+    async def get_items_by_item_ids(self, item_ids: List[int]) -> List[Dict[str, Any]]:
+        """
+        Get multiple items by their item_ids.
+        Joins item_listings with mercari_items for full details.
+        """
+        if not item_ids:
+            return []
+        
+        # Subquery to get one representative mercari_item per item_id
+        subq = (
+            select(
+                MercariItem.item_id,
+                func.min(MercariItem.id).label('min_id')
+            )
+            .group_by(MercariItem.item_id)
+            .subquery()
+        )
+
+        result = await self.db.execute(
+            select(ItemListing, MercariItem, User)
+            .join(subq, ItemListing.item_id == subq.c.item_id)
+            .join(MercariItem, and_(
+                MercariItem.item_id == ItemListing.item_id,
+                MercariItem.id == subq.c.min_id
+            ))
+            .join(User, ItemListing.seller_user_id == User.id)
+            .where(ItemListing.item_id.in_(item_ids))
+        )
+        rows = result.all()
+
+        return [self._combine_item_data(listing, mercari, seller) for listing, mercari, seller in rows]
 

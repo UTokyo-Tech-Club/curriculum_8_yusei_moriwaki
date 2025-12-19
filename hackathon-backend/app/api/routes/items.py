@@ -173,3 +173,37 @@ async def get_generated_image(
             detail=f"画像の生成に失敗しました: {str(e)}"
         )
 
+
+@router.get("/search/vector", response_model=List[ItemResponse])
+async def vector_search_items(
+    query: Optional[str] = Query(None, description="Text query for semantic search"),
+    item_id: Optional[int] = Query(None, description="Item ID to find similar items to"),
+    category: Optional[str] = Query(None, description="Optional category filter"),
+    limit: int = Query(10, le=50, description="Maximum number of results"),
+    item_service: ItemService = Depends(get_item_service)
+):
+    """
+    Search for items using vector similarity and weighted ML features.
+    
+    Either 'query' or 'item_id' must be provided.
+    """
+    if not query and not item_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either 'query' or 'item_id' must be provided"
+        )
+    
+    try:
+        items = await item_service.search_items_vector(
+            query=query,
+            item_id=item_id,
+            category=category,
+            limit=limit
+        )
+        return items
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Vector search failed: {str(e)}"
+        )
+

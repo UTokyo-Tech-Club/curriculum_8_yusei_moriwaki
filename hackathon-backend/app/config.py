@@ -34,6 +34,21 @@ class Settings(BaseSettings):
     # OpenAI Configuration
     OPENAI_API_KEY: Optional[str] = None
     
+    # Pinecone Configuration
+    PINECONE_API_KEY: Optional[str] = None
+    PINECONE_INDEX_NAME: str = "hackathon-items"
+    PINECONE_ENVIRONMENT: Optional[str] = None  # For older Pinecone accounts
+    
+    # Embedding Configuration
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"  # sentence-transformers model
+    
+    # ML Weights Configuration
+    ML_WEIGHTS_PATH: Optional[str] = None  # Path to results JSON file
+    
+    # Similarity Blend Weights
+    VECTOR_WEIGHT: float = 0.6  # Weight for vector similarity (α)
+    FEATURE_WEIGHT: float = 0.4  # Weight for ML features (β)
+    
     # CORS - Can be set via environment variable as comma-separated string
     # Example: CORS_ORIGINS="http://localhost:3000,https://hackathon-frontend-roan.vercel.app"
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,https://hackathon-frontend-roan.vercel.app"
