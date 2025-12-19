@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
     
     # Database configuration
-    MYSQL_HOST: str = "localhost"
+    MYSQL_HOST: str = "term8-yusei-moriwaki:us-central1:uttc"
     MYSQL_USER: str = "root"
     MYSQL_PWD: str = ""
     MYSQL_DATABASE: str = "hackathon"
