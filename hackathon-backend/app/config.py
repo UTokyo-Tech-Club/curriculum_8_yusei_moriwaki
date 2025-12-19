@@ -59,7 +59,16 @@ class Settings(BaseSettings):
         # URL-encode username and password to handle special characters like @ and !
         user = quote_plus(self.MYSQL_USER)
         pwd = quote_plus(self.MYSQL_PWD)
-        return f"mysql+aiomysql://{user}:{pwd}@{self.MYSQL_HOST}/{self.MYSQL_DATABASE}"
+        
+        # Handle Cloud SQL connection strings (format: PROJECT_ID:REGION:INSTANCE_NAME)
+        # Convert to Unix socket path format for Cloud Run
+        host = self.MYSQL_HOST
+        if ":" in host and not host.startswith("/") and not host.startswith("localhost") and not host.startswith("127.0.0.1"):
+            # This is a Cloud SQL connection string, use Unix socket with localhost
+            socket_path = f"/cloudsql/{host}"
+            return f"mysql+aiomysql://{user}:{pwd}@localhost/{self.MYSQL_DATABASE}?unix_socket={quote_plus(socket_path)}"
+        
+        return f"mysql+aiomysql://{user}:{pwd}@{host}/{self.MYSQL_DATABASE}"
     
     @property
     def SYNC_DATABASE_URL(self) -> str:
@@ -67,7 +76,16 @@ class Settings(BaseSettings):
         # URL-encode username and password to handle special characters like @ and !
         user = quote_plus(self.MYSQL_USER)
         pwd = quote_plus(self.MYSQL_PWD)
-        return f"mysql+pymysql://{user}:{pwd}@{self.MYSQL_HOST}/{self.MYSQL_DATABASE}"
+        
+        # Handle Cloud SQL connection strings (format: PROJECT_ID:REGION:INSTANCE_NAME)
+        # Convert to Unix socket path format for Cloud Run
+        host = self.MYSQL_HOST
+        if ":" in host and not host.startswith("/") and not host.startswith("localhost") and not host.startswith("127.0.0.1"):
+            # This is a Cloud SQL connection string, use Unix socket with localhost
+            socket_path = f"/cloudsql/{host}"
+            return f"mysql+pymysql://{user}:{pwd}@localhost/{self.MYSQL_DATABASE}?unix_socket={quote_plus(socket_path)}"
+        
+        return f"mysql+pymysql://{user}:{pwd}@{host}/{self.MYSQL_DATABASE}"
 
 
 # Global settings instance
