@@ -8,10 +8,9 @@ from app.api.schemas.item import (
     ItemResponse,
     ItemCreateRequest,
     ItemUpdateRequest,
-    ItemFilters
 )
 from app.services.item_service import ItemService
-from app.dependencies import get_item_service, get_current_user_id, get_optional_user_id
+from app.dependencies import get_item_service, get_current_user_id
 
 router = APIRouter(prefix="/items", tags=["Items"])
 

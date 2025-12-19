@@ -99,7 +99,7 @@ async def get_purchase_service(
 
 
 # ============================================================================
-# Authentication Dependencies (Dummy Implementation)
+# Authentication Dependencies
 # ============================================================================
 
 async def get_current_user_id(

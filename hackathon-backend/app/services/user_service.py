@@ -4,6 +4,7 @@ User Service - Business logic for user profile operations.
 from typing import Optional
 
 from app.repositories.user_repository import UserRepository
+from app.domain.entities.user import UserEntity
 
 
 class UserService:
@@ -22,6 +23,7 @@ class UserService:
         items_count = await self.user_repo.get_items_count(user_id)
         purchases_count = await self.user_repo.get_purchases_count(user_id)
 
+        # Map domain entity to dict for API response
         return {
             "id": str(user.id),
             "email": user.email,
@@ -54,6 +56,7 @@ class UserService:
         if not user:
             raise ValueError("ユーザーが見つかりません")
 
+        # Map domain entity to dict for API response
         return {
             "id": str(user.id),
             "email": user.email,
