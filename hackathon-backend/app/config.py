@@ -34,8 +34,21 @@ class Settings(BaseSettings):
     # OpenAI Configuration
     OPENAI_API_KEY: Optional[str] = None
     
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    # CORS - Can be set via environment variable as comma-separated string
+    # Example: CORS_ORIGINS="http://localhost:3000,https://hackathon-frontend-roan.vercel.app"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,https://hackathon-frontend-roan.vercel.app"
+    
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS string into a list."""
+        if isinstance(self.CORS_ORIGINS, str):
+            # Split by comma and strip whitespace
+            origins = [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+            return origins
+        elif isinstance(self.CORS_ORIGINS, list):
+            return self.CORS_ORIGINS
+        else:
+            return ["http://localhost:3000"]
     
     # API Configuration
     API_V1_PREFIX: str = "/api"
