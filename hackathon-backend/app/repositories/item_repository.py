@@ -154,7 +154,13 @@ class ItemRepository:
 
         return [self._combine_item_data(listing, mercari, seller) for listing, mercari, seller in rows]
 
-    async def get_recommended(self, item_id: int, category: str, limit: int = 6) -> List[Dict[str, Any]]:
+    async def get_recommended(
+        self, 
+        item_id: int, 
+        category: str, 
+        limit: int = 6,
+        search: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Get recommended items from the same category, excluding the given item."""
         # Reverse map frontend category to Mercari c0_name values
         c0_names = self._reverse_map_category(category)
@@ -185,6 +191,17 @@ class ItemRepository:
         # Filter by multiple c0_names using OR (match any of the category names)
         c0_conditions = [MercariItem.c0_name.ilike(f"%{name}%") for name in c0_names]
         query = query.where(or_(*c0_conditions))
+        
+        # Search by title (if provided)
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    MercariItem.name.ilike(search_pattern),
+                    MercariItem.brand_name.ilike(search_pattern),
+                    MercariItem.c0_name.ilike(search_pattern)
+                )
+            )
         
         # Exclude the current item by item_id
         query = query.where(ItemListing.item_id != item_id)
@@ -230,7 +247,8 @@ class ItemRepository:
         category: str = "other",
         condition: Optional[str] = "Good",
         brand_name: Optional[str] = None,
-        images: List[str] = []
+        images: List[str] = [],
+        image_url: Optional[str] = None
     ) -> ItemListing:
         """Create a new mercari item and listing."""
         from typing import List
@@ -257,7 +275,8 @@ class ItemRepository:
             seller_user_id=seller_user_id,
             item_id=item_id,
             product_id=f"PROD-{item_id}",
-            status=ListingStatus.ACTIVE
+            status=ListingStatus.ACTIVE,
+            image_url=image_url
         )
         self.db.add(listing)
         await self.db.commit()
@@ -267,7 +286,8 @@ class ItemRepository:
     async def update_listing(
         self,
         listing_id: int,
-        status: Optional[str] = None
+        status: Optional[str] = None,
+        image_url: Optional[str] = None
     ) -> Optional[ItemListing]:
         """Update an item listing."""
         result = await self.db.execute(
@@ -280,6 +300,9 @@ class ItemRepository:
 
         if status:
             listing.status = ListingStatus(status)
+        
+        if image_url is not None:
+            listing.image_url = image_url
 
         await self.db.commit()
         await self.db.refresh(listing)
@@ -313,6 +336,11 @@ class ItemRepository:
         seller: User
     ) -> Dict[str, Any]:
         """Combine ItemListing and MercariItem data into a single dict."""
+        # Convert image_url to images array for backward compatibility
+        images = []
+        if listing.image_url:
+            images = [listing.image_url]
+        
         return {
             "id": str(listing.id),
             "itemId": listing.item_id,
@@ -320,7 +348,7 @@ class ItemRepository:
             "name": mercari.name or "No title",  # Alias for embedding service
             "description": mercari.description or mercari.name or "No description",
             "price": float(mercari.price) if mercari.price else 0.0,
-            "images": [],  # Placeholder - no images in DB yet
+            "images": images,
             "category": self._map_category(mercari.c0_name),
             "c0_name": mercari.c0_name,  # For similarity calculation
             "c1_name": mercari.c1_name,  # For similarity calculation

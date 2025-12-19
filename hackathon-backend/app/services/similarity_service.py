@@ -120,6 +120,23 @@ class SimilarityService:
         if ml_weights is None:
             ml_weights = ml_weights_service.get_all_weights()
         
+        # Determine query type: Recommended (item_id search) vs Search (text query)
+        # If query_item has itemId, it's a full item (Recommended) - use feature matching (β > 0)
+        # If query_item is None or has no itemId, it's a text query (Search) - use β = 0
+        use_feature_matching = (
+            query_item is not None and 
+            query_item.get("itemId") is not None  # Complete item information available
+        )
+        
+        if use_feature_matching:
+            # Recommended: Use feature matching with ML weights (β > 0)
+            feature_weight = self.feature_weight
+            vector_weight = self.vector_weight
+        else:
+            # Search: No feature matching (β = 0), use vector score only
+            feature_weight = 0.0
+            vector_weight = 1.0  # Normalize vector weight to 1.0
+        
         # Remove intercept from weights (not used in feature matching)
         feature_weights = {k: v for k, v in ml_weights.items() if k != "intercept"}
         
@@ -130,9 +147,9 @@ class SimilarityService:
             # Normalize to [0, 1] for consistency
             normalized_vector_score = (vector_score + 1.0) / 2.0
             
-            # Calculate weighted feature score (use empty dict if query_item is None)
+            # Calculate weighted feature score (only for Recommended queries)
             feature_score = 0.0
-            if query_item:
+            if use_feature_matching:
                 feature_score = self._calculate_weighted_features(
                     query_item,
                     item,
@@ -140,9 +157,11 @@ class SimilarityService:
                 )
             
             # Combine scores
+            # For Recommended: final_score = α × vector + β × feature
+            # For Search: final_score = α × vector (β = 0)
             final_score = (
-                self.vector_weight * normalized_vector_score +
-                self.feature_weight * feature_score
+                vector_weight * normalized_vector_score +
+                feature_weight * feature_score
             )
             
             results.append((item, final_score))

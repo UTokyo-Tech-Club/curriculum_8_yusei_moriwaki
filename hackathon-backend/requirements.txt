@@ -19,3 +19,5 @@ Pillow>=10.0.0
 pinecone>=5.1.0
 sentence-transformers>=2.2.0
 torch>=2.0.0
+supabase>=2.0.0
+python-multipart>=0.0.6

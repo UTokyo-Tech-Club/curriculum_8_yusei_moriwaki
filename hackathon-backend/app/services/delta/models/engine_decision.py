@@ -4,20 +4,15 @@ from pydantic import BaseModel, Field
 
 
 class ProductEngineDecision(BaseModel):
-    """商品関連の意思決定結果"""
+    """商品関連の分析結果"""
     
     action: Literal["SEARCH", "WONDER", "COMPARE", "PURCHASE"] = Field(
         description="ユーザーの行動: 'SEARCH' (商品を探している), 'WONDER' (探索的検索), 'COMPARE' (商品を比較している), 'PURCHASE' (購入を決断した)"
     )
     
-    category: Optional[str] = Field(
-        None,
-        description="SEARCH アクションの場合の商品カテゴリー (fashion, electronics, books, sports, home, other)"
-    )
-    
     search_query: Optional[str] = Field(
         None,
-        description="SEARCH アクションの場合の検索キーワード。ユーザーが言及した商品名、ブランド名など。例: 'ナイキ', 'ノートPC', 'スニーカー'"
+        description="SEARCH アクションの場合の検索キーワード。ユーザーが探している、欲しがっている商品名、ブランド名、特徴などを抽出。例: 'ナイキ', 'ノートPC', 'スニーカー', '赤いバッグ'"
     )
     
     product_ids: Optional[List[int]] = Field(

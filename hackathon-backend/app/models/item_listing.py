@@ -31,6 +31,7 @@ class ItemListing(Base):
     status = Column(Enum(ListingStatus), default=ListingStatus.ACTIVE, index=True)
     views_count = Column(Integer, default=0)
     likes_count = Column(Integer, default=0)
+    image_url = Column(String(500), nullable=True)
 
     # Relationships
     seller = relationship("User", back_populates="item_listings", foreign_keys=[seller_user_id])
@@ -42,6 +43,7 @@ class ItemListing(Base):
 
     def __repr__(self):
         return f"<ItemListing(id={self.id}, item_id={self.item_id}, seller_id={self.seller_user_id}, status='{self.status}')>"
+
 
 
 

@@ -1,7 +1,7 @@
 """
 Items API routes.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, UploadFile, File, Form, Request
 from typing import List, Optional
 
 from app.api.schemas.item import (
@@ -12,6 +12,10 @@ from app.api.schemas.item import (
 from app.services.item_service import ItemService
 from app.dependencies import get_item_service, get_current_user_id
 from app.utils.image_generator import generate_item_image
+from app.services.supabase_service import supabase_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/items", tags=["Items"])
 
@@ -68,27 +72,82 @@ async def get_recommended_items(
 
 @router.post("", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
 async def create_item(
-    request: ItemCreateRequest,
+    request: Request,
     user_id: int = Depends(get_current_user_id),
     item_service: ItemService = Depends(get_item_service)
 ):
-    """Create a new item listing (requires authentication)."""
+    """Create a new item listing (supports both JSON and multipart/form-data)."""
     try:
+        content_type = request.headers.get("content-type", "")
+        
+        # Check if it's multipart/form-data (file upload)
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            title = form.get("title")
+            description = form.get("description")
+            price = float(form.get("price", 0))
+            category = form.get("category", "other")
+            condition = form.get("condition", "Good")
+            brand_name = form.get("brand_name")
+            image = form.get("image")
+            
+            if not title or not description:
+                raise ValueError("title and description are required")
+            
+            image_url = None
+            if image and hasattr(image, 'filename') and image.filename:
+                try:
+                    image_bytes = await image.read()
+                    content_type_img = image.content_type or "image/jpeg"
+                    image_url = supabase_service.upload_image(
+                        file_bytes=image_bytes,
+                        filename=image.filename,
+                        content_type=content_type_img
+                    )
+                except Exception as e:
+                    logger.error(f"Error uploading image: {e}")
+                    # Continue without image if upload fails
+                    image_url = None
+        else:
+            # JSON request
+            body = await request.json()
+            title = body.get("title")
+            description = body.get("description")
+            price = float(body.get("price", 0))
+            category = body.get("category", "other")
+            condition = body.get("condition", "Good")
+            brand_name = body.get("brand_name")
+            images = body.get("images", [])
+            
+            if not title or not description:
+                raise ValueError("title and description are required")
+            
+            # If images array contains URLs, use the first one
+            image_url = images[0] if images and len(images) > 0 else None
+        
+        # Create item
         item = await item_service.create_item(
             seller_user_id=user_id,
-            title=request.title,
-            description=request.description,
-            price=request.price,
-            category=request.category,
-            condition=request.condition,
-            brand_name=request.brand_name,
-            images=request.images
+            title=title,
+            description=description,
+            price=price,
+            category=category,
+            condition=condition,
+            brand_name=brand_name,
+            images=[],
+            image_url=image_url
         )
         return item
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error creating item: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"商品の作成に失敗しました: {str(e)}"
         )
 
 
@@ -105,6 +164,61 @@ async def update_item(
             listing_id=listing_id,
             user_id=user_id,
             status=request.status
+        )
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品が見つかりません"
+            )
+        return item
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+
+
+@router.put("/{listing_id}/image", response_model=ItemResponse)
+async def update_item_image(
+    listing_id: int,
+    image: UploadFile = File(...),
+    user_id: int = Depends(get_current_user_id),
+    item_service: ItemService = Depends(get_item_service)
+):
+    """Update item image (requires authentication and ownership)."""
+    try:
+        image_url = None
+        
+        # Upload image to Supabase
+        if image and image.filename:
+            try:
+                # Read image file
+                image_bytes = await image.read()
+                content_type = image.content_type or "image/jpeg"
+                
+                # Upload to Supabase
+                image_url = supabase_service.upload_image(
+                    file_bytes=image_bytes,
+                    filename=image.filename,
+                    content_type=content_type
+                )
+            except Exception as e:
+                logger.error(f"Error uploading image: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"画像のアップロードに失敗しました: {str(e)}"
+                )
+        
+        item = await item_service.update_item(
+            listing_id=listing_id,
+            user_id=user_id,
+            status=None,
+            image_url=image_url
         )
         if not item:
             raise HTTPException(

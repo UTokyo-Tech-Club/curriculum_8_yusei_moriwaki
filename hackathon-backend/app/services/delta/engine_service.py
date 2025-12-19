@@ -1,4 +1,4 @@
-"""商品関連の意思決定エンジン（最小版）"""
+"""商品関連の意思決定分析（最小版）"""
 import logging
 from typing import List, Dict
 
@@ -11,20 +11,17 @@ ENGINE_SYSTEM_PROMPT = """あなたはユーザーの商品関連の行動を分
 
 会話履歴から、ユーザーが以下のどの状態かを判断してください：
 
-1. **SEARCH**: ユーザーが特定のカテゴリーで商品を探している
-   - 「ファッションが欲しい」「本を探している」「スポーツ用品を探す」など
-   - カテゴリーが明確に言及されている
+1. **SEARCH**: ユーザーが商品を探している
+   - 「ナイキのスニーカー探してる」「ノートPCが欲しい」「赤いバッグ」など
    - 商品について質問しているが、特定の商品はまだ決めていない
-   - category フィールドに該当カテゴリーを設定: "fashion", "electronics", "books", "sports", "home", "other"
-   - **検索キーワード抽出**: ユーザーが言及した商品名、ブランド名、特徴などを search_query に設定
-     - 例: 「ナイキのスニーカー探してる」→ category: "fashion", search_query: "ナイキ"
-     - 例: 「ノートPCが欲しい」→ category: "electronics", search_query: "ノートPC"
-     - 例: 「赤いバッグ」→ category: "fashion", search_query: "赤いバッグ"
+   - **検索キーワード抽出**: ユーザーが探している、欲しがっている商品名、ブランド名、特徴などを search_query に設定
+     - 例: 「ナイキのスニーカー探してる」→ search_query: "ナイキ スニーカー"
+     - 例: 「ノートPCが欲しい」→ search_query: "ノートPC"
+     - 例: 「赤いバッグ」→ search_query: "赤い バッグ"
      - 検索キーワードがない場合は search_query は null
 
 2. **WONDER**: ユーザーが探索的に商品を見ている
    - 「何かおすすめは？」「面白い商品ある？」「何がいいかわからない」など
-   - カテゴリーが特定できない、または広範囲な探索
    - 特定の意図がない探索的検索
 
 3. **COMPARE**: ユーザーが提示された複数の商品を比較している
@@ -38,8 +35,8 @@ ENGINE_SYSTEM_PROMPT = """あなたはユーザーの商品関連の行動を分
    - 商品IDが特定できる場合のみ product_id を設定
 
 **重要**:
-- action が "SEARCH" の場合のみ category と search_query を設定
-- search_query は商品名、ブランド名、特徴などの検索に使えるキーワード（1-3語程度が望ましい）
+- action が "SEARCH" の場合のみ search_query を設定
+- search_query はユーザーが探している、欲しがっている商品に関するキーワード（商品名、ブランド名、特徴など）
 - action が "COMPARE" の場合のみ product_ids を設定（リスト）
 - action が "PURCHASE" の場合のみ product_id を設定（単一）
 - 商品IDが特定できない場合は該当フィールドは null
@@ -59,7 +56,7 @@ async def make_product_engine_decision(
         messages: メッセージ履歴 [{"role": "user", "content": "..."}, ...]
     
     Returns:
-        ProductEngineDecision: エンジンの決定
+        ProductEngineDecision: 分析結果
     """
     if not messages:
         return ProductEngineDecision(action="WONDER")
@@ -85,11 +82,20 @@ async def make_product_engine_decision(
             llm_messages,
             ProductEngineDecision
         )
-        # エンジンの決定結果をログに出力
-        logger.debug("Product Engine Decision")
+        # 分析結果をログとprintで出力
+        print("=" * 60)
+        print("【商品分析結果】")
+        print(f"Action: {decision.action}")
+        if decision.search_query:
+            print(f"Search Query: {decision.search_query}")
+        if decision.product_id:
+            print(f"Product ID: {decision.product_id}")
+        if decision.product_ids:
+            print(f"Product IDs: {decision.product_ids}")
+        print("=" * 60)
+        
+        logger.debug("Product Analysis Decision")
         logger.debug(f"Action: {decision.action}")
-        if decision.category:
-            logger.debug(f"Category: {decision.category}")
         if decision.search_query:
             logger.debug(f"Search Query: {decision.search_query}")
         if decision.product_id:
@@ -98,14 +104,14 @@ async def make_product_engine_decision(
             logger.debug(f"Product IDs: {decision.product_ids}")
         
         logger.info(
-            f"Product engine decision: action={decision.action}, "
-            f"category={decision.category}, "
+            f"Product analysis: action={decision.action}, "
             f"search_query={decision.search_query}, "
             f"product_id={decision.product_id}, "
             f"product_ids={decision.product_ids}"
         )
         return decision
     except Exception as e:
-        logger.error(f"Error making product engine decision: {e}")
+        logger.error(f"Error making product analysis: {e}")
+        print(f"【エラー】商品分析中にエラーが発生: {e}")
         return ProductEngineDecision(action="WONDER")
 

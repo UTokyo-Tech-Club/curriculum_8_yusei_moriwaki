@@ -137,3 +137,4 @@ def generate_image_data_url(title: str, width: int = 800, height: int = 800) -> 
     base64_str = base64.b64encode(image_bytes).decode('utf-8')
     return f"data:image/png;base64,{base64_str}"
 
+

@@ -82,3 +82,4 @@ async def validate_image_urls(urls: List[str]) -> Tuple[List[str], List[str]]:
     
     return valid_urls, invalid_urls
 
+

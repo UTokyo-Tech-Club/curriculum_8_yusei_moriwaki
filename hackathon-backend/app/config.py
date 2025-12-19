@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     PINECONE_ENVIRONMENT: Optional[str] = None  # For older Pinecone accounts
     
     # Embedding Configuration
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"  # sentence-transformers model
+    EMBEDDING_MODEL: str = "text-embedding-3-small"  # OpenAI embedding model (1536 dimensions)
     
     # ML Weights Configuration
     ML_WEIGHTS_PATH: Optional[str] = None  # Path to results JSON file
@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     # Similarity Blend Weights
     VECTOR_WEIGHT: float = 0.6  # Weight for vector similarity (α)
     FEATURE_WEIGHT: float = 0.4  # Weight for ML features (β)
+    
+    # Supabase Configuration
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None  # Service role key for server-side operations
+    SUPABASE_BUCKET_NAME: str = "item-images"  # Public bucket name for item images
     
     # CORS - Can be set via environment variable as comma-separated string
     # Example: CORS_ORIGINS="http://localhost:3000,https://hackathon-frontend-roan.vercel.app"

@@ -56,7 +56,7 @@ def prepare_metadata(item: dict) -> dict:
 
 
 async def batch_upsert_items():
-    """Batch upsert all items to Pinecone."""
+    """Batch upsert all items to Pinecone using batch embedding generation."""
     # Initialize Pinecone
     logger.info("Initializing Pinecone...")
     await pinecone_service.initialize()
@@ -84,42 +84,67 @@ async def batch_upsert_items():
             return
         
         # Process in batches
-        batch_size = 100
-        vectors = []
+        # OpenAI supports up to 2048 inputs per batch, but we'll use smaller batches
+        # to balance memory usage and efficiency
+        embedding_batch_size = 500  # Generate embeddings in batches of 500
+        pinecone_batch_size = 100   # Upsert to Pinecone in batches of 100
+        
         processed = 0
         failed = 0
         
-        for i, item in enumerate(items):
-            try:
-                # Generate embedding
-                embedding = await embedding_service.generate_item_embedding(item)
-                
-                # Prepare metadata (filter out None/null values)
-                metadata = prepare_metadata(item)
-                
-                # Add to batch
-                vectors.append({
-                    "id": str(item["itemId"]),
-                    "values": embedding,
-                    "metadata": metadata
-                })
-                
-                # Upsert batch when full
-                if len(vectors) >= batch_size:
-                    await pinecone_service.upsert_batch_embeddings(vectors)
-                    processed += len(vectors)
-                    logger.info(f"Processed {processed}/{len(items)} items")
-                    vectors = []
+        # Process items in batches for embedding generation
+        for i in range(0, len(items), embedding_batch_size):
+            batch_items = items[i:i + embedding_batch_size]
+            batch_texts = []
+            batch_metadata = []
+            batch_ids = []
+            
+            # Prepare texts and metadata for this batch
+            for item in batch_items:
+                try:
+                    # Use the same method as embedding_service to combine text
+                    text = embedding_service._combine_item_text(item)
+                    if not text.strip():
+                        logger.warning(f"Empty text for item {item.get('itemId')}, using placeholder")
+                        text = "item"
                     
-            except Exception as e:
-                logger.error(f"Error processing item {item.get('itemId')}: {e}")
-                failed += 1
+                    batch_texts.append(text)
+                    batch_metadata.append(prepare_metadata(item))
+                    batch_ids.append(str(item["itemId"]))
+                except Exception as e:
+                    logger.error(f"Error preparing item {item.get('itemId')}: {e}")
+                    failed += 1
+                    continue
+            
+            if not batch_texts:
                 continue
-        
-        # Upsert remaining vectors
-        if vectors:
-            await pinecone_service.upsert_batch_embeddings(vectors)
-            processed += len(vectors)
+            
+            try:
+                # Generate embeddings in batch
+                logger.info(f"Generating embeddings for batch {i//embedding_batch_size + 1} ({len(batch_texts)} items)...")
+                batch_embeddings = await embedding_service.generate_batch_embeddings(batch_texts)
+                
+                # Prepare vectors for Pinecone
+                vectors = []
+                for j, (item_id, embedding, metadata) in enumerate(zip(batch_ids, batch_embeddings, batch_metadata)):
+                    vectors.append({
+                        "id": item_id,
+                        "values": embedding,
+                        "metadata": metadata
+                    })
+                
+                # Upsert to Pinecone in batches
+                for k in range(0, len(vectors), pinecone_batch_size):
+                    pinecone_batch = vectors[k:k + pinecone_batch_size]
+                    await pinecone_service.upsert_batch_embeddings(pinecone_batch)
+                
+                processed += len(vectors)
+                logger.info(f"Processed {processed}/{len(items)} items")
+                
+            except Exception as e:
+                logger.error(f"Error processing batch starting at index {i}: {e}")
+                failed += len(batch_items)
+                continue
         
         logger.info("Batch upsert complete!")
         logger.info(f"  Processed: {processed}")

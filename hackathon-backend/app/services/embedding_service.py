@@ -1,10 +1,12 @@
 """
-Embedding Service - Generates embeddings for items and queries using sentence-transformers.
+Embedding Service - Generates embeddings for items and queries using OpenAI API.
 """
 import logging
+import time
 from typing import Dict, List, Optional
 
-from sentence_transformers import SentenceTransformer
+from openai import OpenAI
+from openai import RateLimitError, APIError
 
 from app.config import settings
 
@@ -12,32 +14,44 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
-    """Service for generating text embeddings."""
+    """Service for generating text embeddings using OpenAI API."""
     
     def __init__(self):
-        self.model: Optional[SentenceTransformer] = None
+        self.client: Optional[OpenAI] = None
         self.model_name = settings.EMBEDDING_MODEL
-        self._load_model()
+        self._initialize_client()
     
-    def _load_model(self) -> None:
-        """Load the sentence-transformers model."""
+    def _initialize_client(self) -> None:
+        """Initialize OpenAI client."""
+        api_key = settings.OPENAI_API_KEY
+        if not api_key:
+            logger.warning("OPENAI_API_KEY not set. Embedding features will be disabled.")
+            return
+        
         try:
-            logger.info(f"Loading embedding model: {self.model_name}")
-            self.model = SentenceTransformer(self.model_name)
-            logger.info(f"Embedding model loaded successfully. Dimension: {self.get_embedding_dimension()}")
+            self.client = OpenAI(api_key=api_key)
+            logger.info(f"OpenAI client initialized with model: {self.model_name}")
+            logger.info(f"Embedding dimension: {self.get_embedding_dimension()}")
         except Exception as e:
-            logger.error(f"Error loading embedding model {self.model_name}: {e}")
+            logger.error(f"Error initializing OpenAI client: {e}")
             raise
     
     def get_embedding_dimension(self) -> int:
         """Get the dimension of embeddings produced by the model."""
-        if self.model is None:
-            return 384  # Default for all-MiniLM-L6-v2
-        return self.model.get_sentence_embedding_dimension()
+        # text-embedding-3-small: 1536 dimensions
+        # text-embedding-3-large: 3072 dimensions
+        if "3-small" in self.model_name:
+            return 1536
+        elif "3-large" in self.model_name:
+            return 3072
+        else:
+            # Default to 1536 for text-embedding-3-small
+            return 1536
     
     def _combine_item_text(self, item: Dict) -> str:
         """
         Combine item fields into a single text string for embedding.
+        Only includes title and brand for optimal embedding quality.
         
         Args:
             item: Dictionary containing item data
@@ -47,41 +61,20 @@ class EmbeddingService:
         """
         parts = []
         
-        # Add title/name
+        # Add title/name (most important)
         if item.get("title") or item.get("name"):
             parts.append(str(item.get("title") or item.get("name")))
         
-        # Add description
-        if item.get("description"):
-            parts.append(str(item["description"]))
-        
-        # Add category information
-        if item.get("category"):
-            parts.append(f"Category: {item['category']}")
-        if item.get("c0_name"):
-            parts.append(f"Category: {item['c0_name']}")
-        if item.get("c1_name"):
-            parts.append(f"Subcategory: {item['c1_name']}")
-        if item.get("c2_name"):
-            parts.append(f"Subcategory: {item['c2_name']}")
-        
-        # Add brand
+        # Add brand (high importance from ML weights: 0.78)
         if item.get("brandName") or item.get("brand_name"):
-            parts.append(f"Brand: {item.get('brandName') or item.get('brand_name')}")
-        
-        # Add condition
-        if item.get("condition") or item.get("item_condition_name"):
-            parts.append(f"Condition: {item.get('condition') or item.get('item_condition_name')}")
-        
-        # Add size
-        if item.get("size_name"):
-            parts.append(f"Size: {item['size_name']}")
+            brand = item.get("brandName") or item.get("brand_name")
+            parts.append(f"Brand: {brand}")
         
         return " ".join(parts)
     
     async def generate_item_embedding(self, item: Dict) -> List[float]:
         """
-        Generate embedding for an item.
+        Generate embedding for an item using OpenAI API.
         
         Args:
             item: Dictionary containing item data
@@ -89,8 +82,8 @@ class EmbeddingService:
         Returns:
             List of floats representing the embedding vector
         """
-        if self.model is None:
-            raise RuntimeError("Embedding model not loaded")
+        if self.client is None:
+            raise RuntimeError("OpenAI client not initialized. Check OPENAI_API_KEY.")
         
         text = self._combine_item_text(item)
         if not text.strip():
@@ -98,15 +91,24 @@ class EmbeddingService:
             text = "item"
         
         try:
-            embedding = self.model.encode(text, normalize_embeddings=True)
-            return embedding.tolist()
+            response = self.client.embeddings.create(
+                model=self.model_name,
+                input=text
+            )
+            return response.data[0].embedding
+        except RateLimitError as e:
+            logger.error(f"OpenAI rate limit exceeded: {e}")
+            raise
+        except APIError as e:
+            logger.error(f"OpenAI API error: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error generating embedding for item: {e}")
             raise
     
     async def generate_query_embedding(self, query: str) -> List[float]:
         """
-        Generate embedding for a search query.
+        Generate embedding for a search query using OpenAI API.
         
         Args:
             query: Search query text
@@ -114,22 +116,32 @@ class EmbeddingService:
         Returns:
             List of floats representing the embedding vector
         """
-        if self.model is None:
-            raise RuntimeError("Embedding model not loaded")
+        if self.client is None:
+            raise RuntimeError("OpenAI client not initialized. Check OPENAI_API_KEY.")
         
         if not query or not query.strip():
             raise ValueError("Query text cannot be empty")
         
         try:
-            embedding = self.model.encode(query, normalize_embeddings=True)
-            return embedding.tolist()
+            response = self.client.embeddings.create(
+                model=self.model_name,
+                input=query
+            )
+            return response.data[0].embedding
+        except RateLimitError as e:
+            logger.error(f"OpenAI rate limit exceeded: {e}")
+            raise
+        except APIError as e:
+            logger.error(f"OpenAI API error: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error generating query embedding: {e}")
             raise
     
     async def generate_batch_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
-        Generate embeddings for multiple texts in batch.
+        Generate embeddings for multiple texts in batch using OpenAI API.
+        OpenAI supports up to 2048 inputs per request.
         
         Args:
             texts: List of text strings
@@ -137,17 +149,52 @@ class EmbeddingService:
         Returns:
             List of embedding vectors
         """
-        if self.model is None:
-            raise RuntimeError("Embedding model not loaded")
+        if self.client is None:
+            raise RuntimeError("OpenAI client not initialized. Check OPENAI_API_KEY.")
+        
+        if not texts:
+            return []
+        
+        # OpenAI batch limit is 2048 inputs per request
+        batch_size = 2048
+        all_embeddings = []
         
         try:
-            embeddings = self.model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-            return embeddings.tolist()
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i + batch_size]
+                
+                try:
+                    response = self.client.embeddings.create(
+                        model=self.model_name,
+                        input=batch
+                    )
+                    batch_embeddings = [item.embedding for item in response.data]
+                    all_embeddings.extend(batch_embeddings)
+                    
+                    # Rate limit handling: small delay between batches
+                    if i + batch_size < len(texts):
+                        time.sleep(0.1)
+                        
+                except RateLimitError as e:
+                    logger.warning(f"Rate limit hit, waiting before retry: {e}")
+                    time.sleep(1)
+                    # Retry the batch
+                    response = self.client.embeddings.create(
+                        model=self.model_name,
+                        input=batch
+                    )
+                    batch_embeddings = [item.embedding for item in response.data]
+                    all_embeddings.extend(batch_embeddings)
+                    
+        except APIError as e:
+            logger.error(f"OpenAI API error in batch embeddings: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error generating batch embeddings: {e}")
             raise
+        
+        return all_embeddings
 
 
 # Global instance
 embedding_service = EmbeddingService()
-
